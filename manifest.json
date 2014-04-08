@@ -1,13 +1,12 @@
 {
    "app" : {
      "background": {
-       "persistent": true,
        "scripts": [ "util.js", "notifications.js", "clipboard.js" ]
      }
    },
    "commands": {
-     "show-clipboard": {
-       "description": "Show the clipboard",
+     "save-clipboard": {
+       "description": "Save current clipboard",
        "global": true,
        "suggested_key": { "default": "Ctrl+Shift+1" }
      }
@@ -27,5 +26,5 @@
      "syncFileSystem"
    ],
    "short_name": "Clipboard",
-   "version": "1.2"
+   "version": "1.3"
 }

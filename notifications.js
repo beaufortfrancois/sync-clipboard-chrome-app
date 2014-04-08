@@ -1,4 +1,5 @@
-var NOTIFICATION_ID = 'clipboard-sync-id';
+var SAVED_NOTIFICATION_ID = 'saved-notification-id';
+var CLIPBOARD_NOTIFICATION_ID = 'clipboard-notification-id';
 var CLIPBOARD_FILE_NAME = 'clipboard.txt';
 
 var lastContent = null;
@@ -39,7 +40,8 @@ function setClipboard(content) {
             fileWriter.onwriteeend = null;
             // We keep a reference of the content so that we can check later.
             lastContent = content;
-            updateClipboardNotification();
+            // Show saved notification.
+            showSavedNotification(content);
           }
         }
         // Truncating it first.
@@ -49,28 +51,48 @@ function setClipboard(content) {
   });
 };
 
-function showClipboard(update) {
+function getNotificationOptions(content) {
+  var options = {
+    title: 'Sync Clipboard',
+    iconUrl: chrome.runtime.getURL('80.png'),
+  };
+  if (hasImageInClipboard(content)) {
+    options.type = 'image';
+    options.message = '';
+    options.imageUrl = content;
+  } else {
+    options.type = 'basic';
+    options.message = content.trim();
+  }
+  return options;
+}
+
+var savedTimeoutId = null;
+
+function showSavedNotification(content) {
+  clearTimeout(savedTimeoutId);
+  // Clear previous notification first to force a full refresh.
+  chrome.notifications.clear(SAVED_NOTIFICATION_ID, function() {
+    var options = getNotificationOptions(content);
+    options.title = 'Clipboard saved';
+    chrome.notifications.create(SAVED_NOTIFICATION_ID, options, function() {
+      // Clear automatically the saved notification after 4 seconds.
+      savedTimeoutId = setTimeout(function() {
+        chrome.notifications.clear(SAVED_NOTIFICATION_ID, function() {});
+      }, 4000);
+    });
+  });
+};
+
+function showClipboardNotification() {
+  // Clear previous notification first to force a full refresh.
+  chrome.notifications.clear(CLIPBOARD_NOTIFICATION_ID, function() {
     getClipboard(function(content) {
-      var options = {
-        title: 'Sync Clipboard',
-        iconUrl: chrome.runtime.getURL('80.png'),
-      };
-      if (hasImageInClipboard(content)) {
-        options.type = 'image';
-        options.message = '';
-        options.imageUrl = content;
-      } else {
-        options.type = 'basic';
-        options.message = content.trim();
-      };
-      if (typeof update === Boolean && update) {
-        chrome.notifications.update(NOTIFICATION_ID, options, function() {});
-      } else {
-        // Clear previous notification first to force a full refresh.
-        chrome.notifications.clear(NOTIFICATION_ID, function() {
-          chrome.notifications.create(NOTIFICATION_ID, options, function() {});
-        });
-      }
+      var options = getNotificationOptions(content);
+      options.title = 'Clipboard updated';
+      chrome.notifications.create(CLIPBOARD_NOTIFICATION_ID, options,
+          function() {});
+    });
   });
 };
 
@@ -104,20 +126,6 @@ function hasImageInClipboard(content) {
   return (content.indexOf('data:image/') === 0);
 };
 
-function updateClipboardNotification() {
-  // Update notification if one exits.
-  chrome.notifications.getAll(function(notifications) {
-    if (notifications[NOTIFICATION_ID])
-      showClipboard(true);
-  });
-};
-
-// Always update notification on clipboard status change.
-chrome.syncFileSystem.onFileStatusChanged.addListener(function(detail) {
-  if (detail.direction === 'remote_to_local')
-    updateClipboardNotification();
-});
-
 chrome.notifications.onClicked.addListener(function(id) {
   // Clear notification first.
   chrome.notifications.clear(id, function() {
@@ -135,6 +143,8 @@ chrome.notifications.onClicked.addListener(function(id) {
   });
 });
 
-// TODO: Remove this check when chrome.commands is available on Stable channel.
-chrome.commands && chrome.commands.onCommand.addListener(showClipboard);
-chrome.app.runtime.onLaunched.addListener(showClipboard);
+chrome.syncFileSystem.onFileStatusChanged.addListener(function(detail) {
+  if (detail.direction === 'remote_to_local')
+    // Show clipboard notification on sync clipboard status change.
+    showClipboardNotification();
+});

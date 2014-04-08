@@ -33,17 +33,22 @@ function onPaste(event) {
 function copyTextInUserClipboard(text) {
   var buffer = document.createElement('textarea');
   document.body.appendChild(buffer);
-  buffer.style.position = 'absolute';
+  buffer.style.position = 'absolute'; // Hack: http://crbug.com/334062
   buffer.value = text;
   buffer.select();
-  
   document.execCommand('copy');
   buffer.remove();
 }
 
-var buffer = document.createElement('div');
-buffer.contentEditable = true;
 
-setInterval(function() { document.execCommand('paste'); }, 1000);
+function saveUserClipboard() {
+  var buffer = document.createElement('div');
+  buffer.contentEditable = true;
+  buffer.style.position = 'absolute'; // Hack: http://crbug.com/334062
+  window.addEventListener('paste', onPaste);
+  document.execCommand('paste');
+}
 
-window.addEventListener('paste', onPaste);
+// TODO: Remove this when chrome.commands is available on Stable channel.
+chrome.commands && chrome.commands.onCommand.addListener(saveUserClipboard);
+chrome.app.runtime.onLaunched.addListener(saveUserClipboard);
