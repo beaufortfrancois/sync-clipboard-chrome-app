@@ -19,10 +19,9 @@ function getClipboard(callback) {
       });
     });
   });
-}
+};
 
 function setClipboard(content) {
-  console.log(content, lastContent);
   // Don't set clipboard if it has already been done once with the same content.
   if (content === lastContent)
     return;
@@ -30,7 +29,7 @@ function setClipboard(content) {
   // Always clear notification on clipboard change.
   chrome.notifications.clear(NOTIFICATION_ID, function() {});
   
-  // Write to clipboard.
+  // Write to clipboard file.
   chrome.syncFileSystem.requestFileSystem(function(fileSystem) {
     fileSystem.root.getFile(CLIPBOARD_FILE_NAME, {create: true},
         function(fileEntry) {   
@@ -41,14 +40,16 @@ function setClipboard(content) {
             fileWriter.write(blob);
           } else {
             fileWriter.onwriteeend = null;
+            // We keep a reference of the content so that we can check later.
             lastContent = content;
           }
-        };  
+        }
+        // Truncating it first.
         fileWriter.truncate(0);
       });
     });
   });
-}
+};
 
 function showClipboard() {
   // Clear previous notification first.
@@ -56,30 +57,30 @@ function showClipboard() {
     getClipboard(function(content) {
       var options = {
         title: 'Sync Clipboard',
-        iconUrl: chrome.runtime.getURL('128.png')
-      }
+        iconUrl: chrome.runtime.getURL('80.png'),
+      };
       if (hasImageInClipboard(content)) {
         options.type = 'image';
         options.message = '';
         options.imageUrl = content;
       } else {
-        options.type = 'basic',
-        options.message = content.trim()
+        options.type = 'basic';
+        options.message = content.trim();
       };
       chrome.notifications.create(NOTIFICATION_ID, options, function() {});
     });
   });
-}
+};
 
 function saveImage(dataUrl) {
   var blob = dataURLtoBlob(dataUrl);
   
-  // This intermediary dummy page is needed because 
-  // I can't call chrome.fileSystem from a background page.
+  // This intermediary dummy page is needed because I can't call
+  // `chrome.fileSystem` from a background page.
   chrome.app.window.create('dummy.html', {hidden: true}, function(appWindow) {
 
     // Prompt user where to save the image.
-    var options = {type: 'saveFile', suggestedName: 'clipboard.png'};
+    var options = {type: 'saveFile', suggestedName: 'sync-clipboard.png'};
     appWindow.contentWindow.chrome.fileSystem.chooseEntry(options,
         function(fileEntry) {
                 
@@ -95,32 +96,35 @@ function saveImage(dataUrl) {
       });
     });
   });
-}
+};
 
 function hasImageInClipboard(content) {
   return (content.indexOf('data:image/') === 0);
-}
+};
 
 // Always clear notification on clipboard status change.
 chrome.syncFileSystem.onFileStatusChanged.addListener(function(detail) {
   if (detail.direction === 'remote_to_local')
     chrome.notifications.clear(NOTIFICATION_ID, function() {});
-})
+});
 
 chrome.notifications.onClicked.addListener(function(id) {
   // Clear notification first.
   chrome.notifications.clear(id, function() {
+
     // Retrieve clipboard item.
     getClipboard(function(content) {      
+
       if (hasImageInClipboard(content))
         // Save image locally.
         saveImage(content);
       else
         // Copy in the user clipboard.
-        setClipboardText(content);
+        copyTextInUserClipboard(content);
     });
   });
 });
 
+// TODO: Remove this check when chrome.commands is available on Stable channel.
 chrome.commands && chrome.commands.onCommand.addListener(showClipboard);
 chrome.app.runtime.onLaunched.addListener(showClipboard);

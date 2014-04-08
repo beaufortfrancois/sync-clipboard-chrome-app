@@ -30,7 +30,7 @@ function onPaste(event) {
   }
 }
 
-function setClipboardText(text) {
+function copyTextInUserClipboard(text) {
   var buffer = document.createElement('textarea');
   document.body.appendChild(buffer);
   buffer.style.position = 'absolute';
