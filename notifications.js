@@ -26,9 +26,6 @@ function setClipboard(content) {
   if (content === lastContent)
     return;
 
-  // Always clear notification on clipboard change.
-  chrome.notifications.clear(NOTIFICATION_ID, function() {});
-  
   // Write to clipboard file.
   chrome.syncFileSystem.requestFileSystem(function(fileSystem) {
     fileSystem.root.getFile(CLIPBOARD_FILE_NAME, {create: true},
@@ -42,6 +39,7 @@ function setClipboard(content) {
             fileWriter.onwriteeend = null;
             // We keep a reference of the content so that we can check later.
             lastContent = content;
+            updateClipboardNotification();
           }
         }
         // Truncating it first.
@@ -51,9 +49,7 @@ function setClipboard(content) {
   });
 };
 
-function showClipboard() {
-  // Clear previous notification first.
-  chrome.notifications.clear(NOTIFICATION_ID, function() {
+function showClipboard(update) {
     getClipboard(function(content) {
       var options = {
         title: 'Sync Clipboard',
@@ -67,8 +63,14 @@ function showClipboard() {
         options.type = 'basic';
         options.message = content.trim();
       };
-      chrome.notifications.create(NOTIFICATION_ID, options, function() {});
-    });
+      if (typeof update === Boolean && update) {
+        chrome.notifications.update(NOTIFICATION_ID, options, function() {});
+      } else {
+        // Clear previous notification first to force a full refresh.
+        chrome.notifications.clear(NOTIFICATION_ID, function() {
+          chrome.notifications.create(NOTIFICATION_ID, options, function() {});
+        });
+      }
   });
 };
 
@@ -102,10 +104,18 @@ function hasImageInClipboard(content) {
   return (content.indexOf('data:image/') === 0);
 };
 
-// Always clear notification on clipboard status change.
+function updateClipboardNotification() {
+  // Update notification if one exits.
+  chrome.notifications.getAll(function(notifications) {
+    if (notifications[NOTIFICATION_ID])
+      showClipboard(true);
+  });
+};
+
+// Always update notification on clipboard status change.
 chrome.syncFileSystem.onFileStatusChanged.addListener(function(detail) {
   if (detail.direction === 'remote_to_local')
-    chrome.notifications.clear(NOTIFICATION_ID, function() {});
+    updateClipboardNotification();
 });
 
 chrome.notifications.onClicked.addListener(function(id) {
