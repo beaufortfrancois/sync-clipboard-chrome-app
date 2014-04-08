@@ -8,7 +8,7 @@
      "save-clipboard": {
        "description": "Save current clipboard",
        "global": true,
-       "suggested_key": { "default": "Ctrl+Shift+1" }
+       "suggested_key": { "default": "Ctrl+Shift+X" }
      }
    },
    "icons": {
