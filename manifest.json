@@ -1,0 +1,30 @@
+{
+   "app" : {
+     "background": {
+       "persistent": true,
+       "scripts": [ "background.js", "clipboard.js", "utils.js" ]
+     }
+   },
+   "commands": {
+     "show-clipboard": {
+       "description": "Show the clipboard",
+       "global": true,
+       "suggested_key": { "default": "Ctrl+Shift+1" }
+     }
+   },
+   "icons": {
+     "128": "128.png",
+     "256": "256.png"
+   },
+   "manifest_version": 2,
+   "name": "Sync Clipboard",
+   "permissions": [
+     "clipboardRead",
+     "clipboardWrite", 
+     {"fileSystem": ["write"]},
+     "notifications",
+     "storage",
+     "syncFileSystem"
+   ],
+   "version": "1"
+}
