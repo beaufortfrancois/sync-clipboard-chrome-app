@@ -2,7 +2,7 @@
    "app" : {
      "background": {
        "persistent": true,
-       "scripts": [ "background.js", "clipboard.js", "utils.js" ]
+       "scripts": [ "util.js", "notifications.js", "clipboard.js" ]
      }
    },
    "commands": {
